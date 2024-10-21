@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Page Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    <style>
+        .dark-mode {
+            background-color: #1a202c;
+            color: #f7fafc;
+        }
+        .group-container {
+            break-inside: avoid;
+            margin-bottom: 1rem;
+        }
+        #linksContainer {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        h1 {
+            margin: 0;
+        }
+        input, button {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <div class="flex items-center justify-between mb-2">
+            <h1 class="text-xl font-bold">Search Page Generator</h1>
+            <button id="darkModeToggle" class="icon-button" aria-label="Toggle Dark Mode">
+                <span id="darkModeIcon">🌞</span>
+            </button>
+        </div>
+        <div class="mb-2">
+            <input type="text" id="query" class="w-full p-2 border border-gray-300 rounded" placeholder="Enter your search query here...">
+            <button id="searchBtn" class="w-full bg-blue-500 text-white py-1 rounded hover:bg-blue-600">Search</button>
+        </div>
+        <div id="linksContainer"></div>
+    </div>
+
+    <script>
+        const searchGroups = {
+            "Social Media": [
+                { name: "LinkedIn", site: "https://www.linkedin.com/search/results/all/?keywords=" },
+                { name: "Twitter", site: "https://twitter.com/search?q=" },
+                { name: "Facebook", site: "https://www.facebook.com/search/top/?q=" }
+            ],
+            "Portfolios": [
+                { name: "Behance", site: "https://www.behance.net/search/users/" },
+                { name: "ArtStation", site: "https://www.artstation.com/search/artists?sort_by=followers&query=" },
+                { name: "Dribbble", site: "https://dribbble.com/search/users?q=" }
+            ],
+            "Blogs": [
+                { name: "Medium", site: "https://medium.com/search?q=" },
+                { name: "WordPress", site: "https://en.search.wordpress.com/?q=" },
+                { name: "Blogger", site: "https://www.blogger.com/search?q=" }
+            ],
+            "Legal": [
+                { name: "Opendatabot", site: "https://opendatabot.ua/search?query=" },
+                { name: "YouControl", site: "https://youcontrol.com.ua/en/search/?q=" },
+                { name: "e-Äriregister", site: "https://ariregister.rik.ee/eng/company?search=" },
+                { name: "Торговельна марка", site: "https://iprop-ua.com/search/?q=" }
+            ],
+            "Business": [
+                { name: "Clutch", site: "https://clutch.co/search?term=" },
+                { name: "Upwork", site: "https://www.upwork.com/search/profiles/?q=" },
+                { name: "GoodFirms", site: "https://www.goodfirms.co/search?search=" },
+                { name: "Crunchbase", site: "https://www.crunchbase.com/search/people?q=" }
+            ],
+            "Other": [
+                { name: "Facebook", site: "https://www.facebook.com/search/top/?q=" },
+                { name: "Instagram", site: "https://www.instagram.com/explore/tags/" },
+                { name: "Glassdoor", site: "https://www.glassdoor.com/Reviews/index.htm?sc.keyword=" },
+                { name: "Indeed", site: "https://www.indeed.com/companies/search?q=" },
+                { name: "GitHub", site: "https://github.com/search?q=" },
+                { name: "GitLab", site: "https://gitlab.com/search?search=" },
+                { name: "Welcome to the Jungle", site: "https://www.welcometothejungle.com/en/companies?search=" }
+            ],
+            "General Research Platforms": [
+                { name: "Great Place to Work", site: "https://www.greatplacetowork.com/search?q=" },
+                { name: "Jobcase", site: "https://www.jobcase.com/search?q=" },
+                { name: "Fairygodboss", site: "https://fairygodboss.com/search?q=" }
+            ],
+            "Business-Specific Resources": [
+                { name: "Hoovers", site: "https://www.dnb.com/business-directory.html?term=" },
+                { name: "AngelList", site: "https://angel.co/companies?query=" },
+                { name: "Zocdoc", site: "https://www.zocdoc.com/search?searchText=" }
+            ],
+            "Social Media Insights": [
+                { name: "Twitter", site: "https://twitter.com/search?q=" },
+                { name: "Reddit", site: "https://www.reddit.com/search/?q=" }
+            ],
+            "Job Review Aggregators": [
+                { name: "CareerBliss", site: "https://www.careerbliss.com/search/?q=" },
+                { name: "Comparably", site: "https://www.comparably.com/companies/search?q=" }
+            ],
+            "Compensation Information": [
+                { name: "Levels.fyi", site: "https://www.levels.fyi/?search=" }
+            ]
+        };
+
+        const $query = document.getElementById('query');
+        const $searchBtn = document.getElementById('searchBtn');
+        const $linksContainer = document.getElementById('linksContainer');
+        const $darkModeToggle = document.getElementById('darkModeToggle');
+        const $darkModeIcon = document.getElementById('darkModeIcon');
+
+        const faviconCache = new Map();
+
+        async function getFaviconUrl(site) {
+            if (faviconCache.has(site)) {
+                return faviconCache.get(site);
+            }
+            const baseUrl = new URL(site).hostname;
+            const defaultFavicon = 'https://www.google.com/s2/favicons?domain=' + baseUrl;
+            faviconCache.set(site, defaultFavicon);
+            return defaultFavicon;
+        }
+
+        async function generateLinks() {
+            const query = $query.value.trim();
+            $linksContainer.innerHTML = '';
+
+            if (!query) {
+                return;
+            }
+
+            for (const group in searchGroups) {
+                const groupContainer = document.createElement('div');
+                groupContainer.classList.add('group-container');
+
+                const groupTitle = document.createElement('h3');
+                groupTitle.textContent = group;
+                groupTitle.classList.add('text-lg', 'font-semibold', 'mt-2', 'mb-1');
+                groupContainer.appendChild(groupTitle);
+
+                const linkList = document.createElement('ul');
+                linkList.classList.add('list-none');
+
+                for (const item of searchGroups[group]) {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('mb-1');
+
+                    const anchor = document.createElement('a');
+                    anchor.href = `${item.site}${encodeURIComponent(query)}`;
+                    anchor.target = '_blank';
+                    anchor.classList.add('text-blue-500', 'hover:underline');
+
+                    const faviconUrl = await getFaviconUrl(item.site);
+                    anchor.innerHTML = `<img src="${faviconUrl}" alt="${item.name} icon" class="inline-block w-4 h-4 mr-1"> ${item.name}`;
+                    listItem.appendChild(anchor);
+
+                    linkList.appendChild(listItem);
+                }
+
+                groupContainer.appendChild(linkList);
+                $linksContainer.appendChild(groupContainer);
+            }
+        }
+
+        $searchBtn.addEventListener('click', generateLinks);
+        $query.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                generateLinks();
+            }
+        });
+
+        $darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            $darkModeIcon.textContent = isDarkMode ? '🌜' : '🌞';
+            localStorage.setItem('darkMode', isDarkMode);
+        });
+
+        // Load dark mode preference on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                $darkModeIcon.textContent = '🌜';
+            }
+        });
+    </script>
+</body>
+</html>
